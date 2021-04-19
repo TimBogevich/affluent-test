@@ -5,28 +5,20 @@ export default class UserLoader {
 
   url: string = process.env.AFF_USERS_URL || ""
 
-  users: User[] = []
-
   async getUsers() {
     let total_pages = 1
     for (let page = 1; page <= total_pages; page++) {
       let res = await axios.get(this.url, { params: { page } })
       total_pages = res.data.total_pages
-      let users: User[] = this.parseRes(res.data.data)
-      this.users.push(...users)
+      this.parseRes(res.data.data)
     }
   }
 
-  async saveUsers() {
-    this.users.forEach(user => {
-      user.save()
-    })
-  }
 
 
   parseRes(data: any) {
     return data.map((i: User) => {
-      return User.build(i)
+      return User.create(i)
     })
   }
 

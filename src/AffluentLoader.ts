@@ -6,6 +6,9 @@ import { json } from "sequelize/types";
 const puppeteer = require('puppeteer');
 const { PendingXHR } = require('pending-xhr-puppeteer');
 import {Tabletojson} from 'tabletojson'
+import DateRow from "./DateRow"
+import parse from 'multi-number-parse';
+
 
 export default class AffluentLoader {
 
@@ -15,24 +18,9 @@ export default class AffluentLoader {
 
   password: string = process.env.AFF_PORTAL_PASSWORD || ""
 
-  downloadUrl: string = "https://develop.pub.afflu.net/api/query/dates?export=1&startDate=2021-03-19&endDate=2021-04-17&dateResolution=day&columns[0][data]=date&columns[1][data]=totalComm&columns[2][data]=netSaleCount&columns[3][data]=netLeadCount&columns[4][data]=clickCount&columns[5][data]=EPC&columns[6][data]=impCount&columns[7][data]=CR&sort=date&sortdir=desc&currency=USD"
 
-  async getDataApi() {
-
-    const transport = axios.create({
-      withCredentials: true
-    })
-
-    let res = await transport.post(this.url, {username: this.user, password: this.password})
-    try {
-      let res2 = await transport.get(this.downloadUrl) 
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-
-  async getData() {
+  async getDates(dt_start: string = process.env.AFF_PORTAL_DT_START,
+                dt_end: string = process.env.AFF_PORTAL_DT_END) {
     let browser = await puppeteer.launch({headless: false});
     const page = await browser.newPage();
     const pendingXHR = new PendingXHR(page);
@@ -58,35 +46,55 @@ export default class AffluentLoader {
     await page.$eval('input[name="daterangepicker_start"]', (el:any) => el.value = "");
     await page.$eval('input[name="daterangepicker_end"]', (el:any) => el.value = "");
     
-    await page.type('input[name="daterangepicker_start"]', "10/01/2020")
-    await page.type('input[name="daterangepicker_end"]', "10/30/2020")
+    await page.type('input[name="daterangepicker_start"]', dt_start )
+    await page.type('input[name="daterangepicker_end"]', dt_end)
 
     const whiteSpace = await page.$('.range_inputs')
     await whiteSpace.click()
 
     const applyBtn = await page.$('.applyBtn')
     await applyBtn.click()
- 
-    await page.waitForSelector(".affLoadSpinner", {hidden: true})
 
-    const inner_html = await page.$eval('table[data-url="geo"]', (el: any) => el.innerHTML);
+    while (true) {
+      await page.waitForSelector(".affLoadSpinner", {hidden: true})
 
-    const tab = Tabletojson.convert("<table>" + inner_html + "</table>")
+      let portlet = await page.$('div[data-name="dates"]')
+      const inner_html = await portlet
+          .$eval('table[data-url="dates"]', (el: any) => el.innerHTML);
+      const tab = Tabletojson.convert("<table>" + inner_html + "</table>")
+  
+      let docs = tab[0].map((i: any) => {
+        return {
+          dt: i["Total Change:"],
+          commission: parse(i["1"].replace("$", ""), ","),
+          sales: parse(i["2"], '.'),
+          leads: i["3"],
+          clicks: parse(i["4"], '.'),
+          epc: parse(i["5"].replace("$", ""), '.'),
+          impressions: i["6"],
+          cr: parse(i["7"], '.'),
+        }
+      })
+  
+      docs.forEach(async (i: DateRow) => {
+        await DateRow.create(i)
+          .catch(error => console.log(error))
+      })
 
-    let documents = tab[0].map((i: any) => {
-      return {
-        country: i["Total Change:"],
-        commission: i["1"],
-        sales: i["2"],
-        leads: i["3"],
-        clicks: i["4"],
-        epc: i["5"],
-        impressions: i["6"],
-        cr: i["7"],
+      let next_btn = await portlet.$('li[class="next"]')
+      let next_value = await next_btn?.getProperty('disabled');
+      
+      if(!next_value) {
+        break
+      } else {
+        await next_btn.click()
       }
-    })
 
-    await page.screenshot({ path: 'example.png' });
+    }
+ 
+
+
+    await browser.close()
 
   }
 

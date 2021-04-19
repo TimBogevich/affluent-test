@@ -1,19 +1,23 @@
 import dotenv from "dotenv-flow"
 dotenv.config()
-// import {sequelize} from "./SequelizeConfig"
-// sequelize.sync({force: true});
-// import UserLoader from "./UsersLoader"
-// let loader = new UserLoader()
+import {sequelize} from "./SequelizeConfig"
+
+import UserLoader from "./UsersLoader"
+let loader = new UserLoader()
 
 import AffluentLoader from "./AffluentLoader"
-let affLoader = new AffluentLoader()
+let affLoader = new AffluentLoader() 
 
 
 const main = async () => {
-  //await loader.getUsers()
-  //await loader.saveUsers()
+  // Create tables with definintions
+  await sequelize.sync({force: true});
 
-  await affLoader.getData()
+  // loading data from API
+  await loader.getUsers()
+
+  //Loading data from Affluent site
+  await affLoader.getDates("10/01/2020", "10/30/2020")
 }
 
 
