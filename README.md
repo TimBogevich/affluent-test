@@ -17,7 +17,7 @@ AFF_PORTAL_PASSWORD=""
 ## Database
 * MySQL
 * All tables are created automatically if they aren't exist
-* I used Sequilize-typescript to load data. If the values changeg by primary key it will be updated.
+* I used Sequilize-typescript to load data. It recreates tables every execution
 
 ```
 DWH_HOST="193.148.161.117"
