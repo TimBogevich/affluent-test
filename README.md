@@ -15,15 +15,16 @@ AFF_PORTAL_PASSWORD=""
 * `npm run start`
 
 ## Database
-MySQL
+* MySQL
+* All tables are created automatically if they aren't exist
+* I used Sequilize-typescript to load data. If the values changeg by primary key it will be updated.
+
 ```
 DWH_HOST="193.148.161.117"
 DWH_DB_NAME="aff_test"
 ```
 
 
-## Notes
-I used Sequilize-typescript to load data. If the values changeg by primary key it will be updated.
 
 
 ## Execution log
