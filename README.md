@@ -3,7 +3,7 @@
 ## Installation
 * Clone the repo
 * Install app dependencies 
-` npm install `
+` npm i `
 * Add variables to `.env` or create file `.env.local` and add them there
 
 ```
