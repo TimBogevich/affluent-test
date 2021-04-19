@@ -26,3 +26,7 @@ DWH_DB_NAME="aff_test"
 I used Sequilize-typescript to load data. If the values changeg by primary key it will be updated.
 
 
+## Execution log
+* execution.log
+
+In case if it's not working (But I hope everything will be ok there)
