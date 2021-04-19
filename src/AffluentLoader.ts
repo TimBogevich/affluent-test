@@ -8,7 +8,7 @@ const { PendingXHR } = require('pending-xhr-puppeteer');
 import {Tabletojson} from 'tabletojson'
 import DateRow from "./DateRow"
 import parse from 'multi-number-parse';
-
+import { DateTime } from "luxon";
 
 export default class AffluentLoader {
 
@@ -21,7 +21,9 @@ export default class AffluentLoader {
 
   async getDates(dt_start: string = process.env.AFF_PORTAL_DT_START,
                 dt_end: string = process.env.AFF_PORTAL_DT_END) {
-    let browser = await puppeteer.launch({headless: false});
+    let browser = await puppeteer.launch(
+      {headless: process.env.AFF_HEADLESS_CHROME || false});
+      
     const page = await browser.newPage();
     const pendingXHR = new PendingXHR(page);
     await page.goto(this.url, {
@@ -33,12 +35,6 @@ export default class AffluentLoader {
     await page.tap('button[class="btn green uppercase"]');
 
     await page.waitForNavigation({'waitUntil': 'networkidle0'});
-
-    // const closeBtn = await page.waitForSelector('#pushActionRefuse',
-    //   {timeout: 30000})
-    // await page.waitForTimeout(1000)
-    // await closeBtn?.click()
-
 
     const button = await page.$("#datepicker");
     await button.click();
@@ -56,7 +52,8 @@ export default class AffluentLoader {
     await applyBtn.click()
 
     while (true) {
-      await page.waitForSelector(".affLoadSpinner", {hidden: true})
+      console.count("parsing PERFORMANCE BY DATE table")
+      await page.waitForSelector(".affLoadSpinner", {hidden: true, timeout: 30000})
 
       let portlet = await page.$('div[data-name="dates"]')
       const inner_html = await portlet
@@ -65,7 +62,7 @@ export default class AffluentLoader {
   
       let docs = tab[0].map((i: any) => {
         return {
-          dt: i["Total Change:"],
+          dt: DateTime.fromFormat(i["Total Change:"], "LLL dd, yyyy"),
           commission: parse(i["1"].replace("$", ""), ","),
           sales: parse(i["2"], '.'),
           leads: i["3"],
@@ -75,19 +72,19 @@ export default class AffluentLoader {
           cr: parse(i["7"], '.'),
         }
       })
+
+      await DateRow.bulkCreate(docs)
+        .catch(error => console.log(error))
   
-      docs.forEach(async (i: DateRow) => {
-        await DateRow.create(i)
-          .catch(error => console.log(error))
-      })
 
       let next_btn = await portlet.$('li[class="next"]')
       let next_value = await next_btn?.getProperty('disabled');
-      
+
       if(!next_value) {
         break
       } else {
         await next_btn.click()
+        await page.waitForTimeout(1500)
       }
 
     }

@@ -15,9 +15,11 @@ const main = async () => {
 
   // loading data from API
   await loader.getUsers()
+    .catch(error => console.log("API", error))
 
   //Loading data from Affluent site
   await affLoader.getDates("10/01/2020", "10/30/2020")
+    .catch(error => console.log("AFFLUENT", error))
 }
 
 
